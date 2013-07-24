@@ -15,7 +15,6 @@
 // **    c - Clear the screen
 // **    e - Erase the curves
 // **    b - Draw Bezier curves
-// **    i - Draw interpolating curves
 // **    s - Draw B-spline curves
 // **
 // */
@@ -112,11 +111,6 @@ void computeMatrix(curveType type, float m[4][4])
                 for (j = 0; j < 4; j++)
 					m[i][j] = midentity[i][j];
             break;
-        case INTERPOLATED:
-            for (i = 0; i < 4; i++)
-                for (j = 0; j < 4; j++)
-                    m[i][j] = minterp[i][j];
-            break;
         case BSPLINE:
             for (i = 0; i < 4; i++)
                 for (j = 0; j < 4; j++)
@@ -158,6 +152,18 @@ static void drawCurves(curveType type)
         i += step;
     }
     glFlush();
+}
+
+static void rotate(float angulo_em_graus, float eixox, float eixoy, float eixoz){
+    
+    #if defined(ICGL_ASSIGNMENT_01_ROTATION_SCALE_TRANSLATION)
+        matrix_struct matrix;
+        make_rotation_matrix(angulo_em_graus, eixox, eixoy, eixoz, matrix);
+        glMultMatrixf(matrix.data());
+    #else
+        glRotatef(angulo_em_graus, eixox, eixoy, eixoz);
+    #endif
+    
 }
 
 /* This routine displays the control points */
@@ -233,10 +239,6 @@ void keyboard(unsigned char key, int x, int y)
             drawCurves(BEZIER);
             lasttype = BEZIER;
             break;
-        case 'i': case 'I':
-            drawCurves(INTERPOLATED);
-            lasttype = INTERPOLATED;
-            break;
         case 's': case 'S':
             drawCurves(BSPLINE);
             lasttype = BSPLINE;
@@ -262,18 +264,18 @@ void reshape(int w, int h)
 
 int main(int argc, char **argv)
 {
-    /* Intialize the program */
+    /* Inicializando o programa !!! */
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGB);
     glutInitWindowSize(width, height);
     glutCreateWindow("curves");
     
-    /* Register the callbacks */
+    /* Chamadas de funções */
     glutDisplayFunc(display);
     glutMouseFunc(mouse);
     glutKeyboardFunc(keyboard);
     glutReshapeFunc(reshape);
-	glClearColor(1.0, 1.0, 1.0, 1.0);
+	glClearColor(2.0, 2.0, 1.0, 1.0);
     glEnable(GL_MAP1_VERTEX_3);
     
     
