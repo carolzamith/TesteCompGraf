@@ -6,39 +6,40 @@
 //  Copyright (c) 2013 Carolina Zamith Cunha e Marcelle Guine. All rights reserved.
 //
 
-/* Todos os pontos de controle sao convertidos para pontos Bezier para
- permitir o uso do OpenGL evaluators */
+/*
+ Bezier   ->  grauCurva = ncpnts - 1
+ */
 
 
 #include <GLUT/glut.h>
 
-GLint tx,ty,angulo;
-GLfloat ex,ey;
+/* Cores para desenhar */
+GLfloat colors[][3] = { { 1.0, 0.0, 0.0 }, { 0.0, 1.0, 0.0 }, { 0.0, 0.0, 1.0 } };
 
-typedef enum
-{
+typedef enum{
     BEZIER,
     BSPLINE
 } tipoCurva;
 
-void calculaMatriz(tipoCurva type, float m[4][4]);
-void mult(float m[4][4], float v[4][3], float r[4][3]);
-
-/* Cores para desenhar */
-GLfloat colors[][3] =
-{
-    { 1.0, 0.0, 0.0 },
-    { 0.0, 1.0, 0.0 },
-    { 0.0, 0.0, 1.0 }
-};
-
-
-#define MAX_CPTS  25 /* Numero maximo de pontos de controle */
-
-GLfloat cpts[MAX_CPTS][3];
-int ncpts = 0; /* Número de pontos de controle */
-int grauCurva = 3;
 tipoCurva tipo = BEZIER;
+
+typedef enum{
+    NO_ESTADO,
+    DESENHANDO,
+    TRANSLADANDO,
+    ROTACIONANDO,
+    ESCALANDO
+} estadoPrograma;
+
+estadoPrograma estado = NO_ESTADO;
+
+
+GLint tx,ty,angulo;
+GLfloat ex,ey;
+
+GLfloat pontosDeControle[10][3];
+int numPontosDeControle = 0;
+int grauCurva = 3;
 
 static int window;
 static int width = 800, height = 600;
@@ -52,7 +53,6 @@ static int transformarCurvaSubmenu_id;
 
 
 /* Matriz */
-
 void mult(float m[4][4], float v[4][3], float r[4][3])
 {
     int i, j, k;
@@ -63,8 +63,6 @@ void mult(float m[4][4], float v[4][3], float r[4][3])
                 r[i][j] += m[i][k] * v[k][j];
 }
 
-
-/* B-spline para matriz de Bezier  */
 static float mbspline[4][4] =
 {
     { 1.0/6.0, 4.0/6.0, 1.0/6.0, 0.0 },
@@ -84,11 +82,11 @@ static float midentity[4][4] =
 
 
 /* Calcula a matriz usada na transformacao dos pontos de controle */
-void calculaMatriz(tipoCurva type, float m[4][4])
+void calculaMatriz(float m[4][4])
 {
     int i, j;
     
-    switch (type)
+    switch (tipo)
     {
         case BEZIER:
             for (i = 0; i < 4; i++)
@@ -104,60 +102,57 @@ void calculaMatriz(tipoCurva type, float m[4][4])
 }
 
 /* Desenha a curva indicada, usando os pontos de controle */
-static void desenhaCurva(tipoCurva type)
+static void desenharCurva()
 {
     int i;
-    int step;
-    GLfloat newcpts[4][3];
-    
+    int aux = 3;
+    GLfloat novoPontoDeControle[4][3];
     float m[4][4];
     
-    /* Calcula a matriz de pontos de controle, e o step */
-    calculaMatriz(type, m);
+    if (tipo == BSPLINE) {
+        aux = 1;
+    }
     
-	if(type == BSPLINE)
-        step = 1;
-	else
-        step = 3;
+    /* Calcula a matriz de pontos de controle */
+    calculaMatriz(m);
     
-    glColor3fv(colors[type]);
-    
+    glColor3fv(colors[tipo]);
     /* Desenha as curvas */
     i = 0;
-    while (i + 3 < ncpts)
+    while (i + 3 < numPontosDeControle)
     {
         /* Calcula com os devidos pontos de controle */
-        mult(m, &cpts[i], newcpts);
+        mult(m, &pontosDeControle[i], novoPontoDeControle);
         
         /* Desenha a curva com o OpenGL evaluators */
-        glMap1f(GL_MAP1_VERTEX_3, 0.0, 1.0, 3, 4, &newcpts[0][0]);
+        glMap1f(GL_MAP1_VERTEX_3, 0.0, 1.0, 3, 4, &novoPontoDeControle[0][0]);
         glMapGrid1f(30, 0.0, 1.0);
         glEvalMesh1(GL_LINE, 0, 30);
         
         /* Avanca ao proximo segmento */
-        i += step;
+        i += aux;
     }
     
     glFlush();
 }
 
-static void rotacao(float angulo_em_graus, float eixox, float eixoy, float eixoz){
+static void rotacionar(/*float anguloEmGraus, float eixox, float eixoy, float eixoz*/){
     
-    #if defined(ASSIGNMENT_ROTACAO_ESCALA_TRANSLACAO)
-        matrix_struct matrix;
-        make_rotation_matrix(angulo_em_graus, eixox, eixoy, eixoz, matrix);
-        glMultMatrixf(matrix.data());
-    #else
-        glRotatef(angulo_em_graus, eixox, eixoy, eixoz);
-    #endif
-    
-}
-
-static void translacao(){
+//    #if defined(ASSIGNMENT_ROTACAO_ESCALA_TRANSLACAO)
+//        matrix_struct matrix;
+//        make_rotation_matrix(angulo_em_graus, eixox, eixoy, eixoz, matrix);
+//        glMultMatrixf(matrix.data());
+//    #else
+//        glRotatef(anguloEmGraus, eixox, eixoy, eixoz);
+//    #endif
     
 }
 
-static void escala(){
+static void transladar(){
+    
+}
+
+static void escalar(){
 
 
 }
@@ -185,8 +180,8 @@ static void display(void)
     glPointSize(5.0);
     
     glBegin(GL_POINTS);
-    for (i = 0; i < ncpts; i++)
-        glVertex3fv(cpts[i]);
+    for (i = 0; i < numPontosDeControle; i++)
+        glVertex3fv(pontosDeControle[i]);
     glEnd();
     
     glFlush();
@@ -203,13 +198,11 @@ void menu(int num)
 			exit(0);
 			break;
         
-        /*Limpar tela*/
+        /*Abrir arquivo*/
         case 1:
-            ncpts = 0;
-			glutPostRedisplay();
             break;
         
-        /*Não definido*/
+        /*Salvar arquivo*/
         case 2:
             break;
             
@@ -225,17 +218,15 @@ void menu(int num)
             grauCurva = num;
             break;
             
-        /*Criar curva*/
+        /*Desenhar curva*/
         case 11:
-            if (tipo == BSPLINE)
-                desenhaCurva(BSPLINE);
-            else
-                desenhaCurva(BEZIER);
+            estado = DESENHANDO;
             break;
             
-        /*Excluir curva*/
+        /*Excluir curvas*/
 		case 12:
-            glutPostRedisplay();
+            numPontosDeControle = 0;
+			glutPostRedisplay();
             break;
             
         /*Escolher tipo: BSPLINE */
@@ -250,24 +241,18 @@ void menu(int num)
             
         /*Transladar curva*/
 		case 15:
+            estado = TRANSLADANDO;
             break;
             
         /*Rotacioar curva*/
 		case 16:
+            estado = ROTACIONANDO;
             break;
             
         /*Escalar curva*/
         case 17:
+            estado = ESCALANDO;
             break;
-            
-        /*Abrir arquivo*/
-		case 18:
-            break;
-            
-        /*Salvar arquivo*/
-		case 19:{
-            break;
-        }
 	}
 }
 
@@ -275,8 +260,8 @@ void menu(int num)
 void createMenu(void)
 {
     arquivoSubmenu_id = glutCreateMenu(menu);
-    glutAddMenuEntry("Abrir", 18);
-    glutAddMenuEntry("Salvar", 19);
+    glutAddMenuEntry("Abrir", 1);
+    glutAddMenuEntry("Salvar", 2);
     
     tipoCurvaSubmenu_id = glutCreateMenu(menu);
     glutAddMenuEntry("B-spline ", 13);
@@ -298,7 +283,7 @@ void createMenu(void)
     glutAddMenuEntry("Escalar", 17);
     
     curvaSubmenu_id = glutCreateMenu(menu);
-    glutAddMenuEntry("Criar curva", 11);
+    glutAddMenuEntry("Desenhar curva", 11);
     glutAddMenuEntry("Excluir curvas", 12);
     glutAddSubMenu("Alterar tipo", tipoCurvaSubmenu_id);
     glutAddSubMenu("Alterar grau", grauCurvaSubmenu_id);
@@ -306,7 +291,6 @@ void createMenu(void)
     
     menu_id = glutCreateMenu(menu);
     glutAddSubMenu("Curva", curvaSubmenu_id);
-    glutAddMenuEntry("Limpar tela", 1);
     glutAddSubMenu("Arquivo", arquivoSubmenu_id);
     glutAddMenuEntry("Sair do programa", 0);
     
@@ -315,70 +299,60 @@ void createMenu(void)
 
 
 /* Esse metodo pega os novos pontos de controle */
-static void mouse(int button, int state, int x, int y)
+static void mouse(int botao, int tecla, int x, int y)
 {
     float wx, wy;
-    
-    /* Apenas nos interessa os cliques com o botao esquerdo */
-    if (button != GLUT_LEFT_BUTTON || state != GLUT_DOWN)
-        return;
-    
-    /* Translada para o nosso sistema de coordenadas */
+    /* Adapta ao nosso sistema de coordenadas */
     wx = (2.0 * x) / (float)(width - 1) - 1.0;
     wy = (2.0 * (height - 1 - y)) / (float)(height - 1) - 1.0;
     
-    
-    /* Armazena pontos ate o maximo permitido */
-    if (ncpts == MAX_CPTS)
-        return;
-    
-    /* Salva o ponto */
-    cpts[ncpts][0] = wx;
-    cpts[ncpts][1] = wy;
-    cpts[ncpts][2] = 0.0;
-    ncpts++;
-    
-    /* Desenha o ponto */
-    glColor3f(0.0, 0.0, 0.0);
-    glPointSize(5.0);
+    /*Desenha na tela*/
+    if (estado == DESENHANDO)
+    {    
+        if (botao != GLUT_LEFT_BUTTON || tecla != GLUT_DOWN)
+            return;
+        
+        /* Armazena pontos ate o maximo permitido */
+        if (numPontosDeControle == 10)
+            return;
 
-    glBegin(GL_POINTS);
-        glVertex3f(wx, wy, 0.0);
-    glEnd();
+        /* Salva o ponto */
+        pontosDeControle[numPontosDeControle][0] = wx;
+        pontosDeControle[numPontosDeControle][1] = wy;
+        pontosDeControle[numPontosDeControle][2] = 0.0;
+        numPontosDeControle++;
+            
+        /* Desenha o ponto */
+        glColor3f(0.0, 0.0, 0.0);
+        glPointSize(5.0);
+            
+        glBegin(GL_POINTS);
+            glVertex3f(wx, wy, 0.0);
+        glEnd();
+            
+        glFlush();
+        
+        /*Desenha curva*/
+        if(grauCurva == (numPontosDeControle - 1)){
+            desenharCurva();
+            //TODO: guardar a curva atual em um array de curvas para a manipulação de curvas individuais
+            numPontosDeControle = 0;
+        }
+    }
     
-    glFlush();
-}
-
-
-/* Essa rotina lida com a dimensao da janela */
-void reshape(int w, int h)
-{
-    width = w;
-    height = h;
-    
-    /* Lida com transformacoes */
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
-    glMatrixMode(GL_MODELVIEW);
-    glViewport(0, 0, w, h);
-    
-    
-    #if defined(ASSIGNMENT_AVISO)
-    
-        #if defined(ASSIGNMENT_ROTACAO_ESCALA_TRANSLACAO)
-            const int assignment_number = 1;
-        #else
-            const int assignment_number = 0;
-        #endif
-    
-    #endif
-    
+    /*Aplica transformações*/
+    else{
+        if (estado == TRANSLADANDO)
+            transladar();
+        else if (estado == ROTACIONANDO)
+            rotacionar();
+        else if (estado == ESCALANDO)
+            escalar();
+    }
 }
 
 
 int main(int argc, char **argv)
-
 {
     /* Inicializando o programa */
     glutInit(&argc, argv);
@@ -391,7 +365,6 @@ int main(int argc, char **argv)
     createMenu();
     glutDisplayFunc(display);
     glutMouseFunc(mouse);
-    glutReshapeFunc(reshape);
 	glClearColor(2.0, 2.0, 1.0, 1.0);
     glEnable(GL_MAP1_VERTEX_3);
     
