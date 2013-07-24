@@ -2,21 +2,9 @@
 //  main.c
 //  TesteCurvas
 //
-//  Created by Carolina Zamith Cunha on 7/23/13.
-//  Copyright (c) 2013 Carolina Zamith Cunha. All rights reserved.
+//  Created by Carolina Zamith Cunha e Marcelle Guine on 7/23/13.
+//  Copyright (c) 2013 Carolina Zamith Cunha e Marcelle Guine. All rights reserved.
 //
-
-// **
-// **
-// **   Menu do programa:
-// **
-// **    q - Sai do programa
-// **    c - Limpa a tela
-// **    e - Apaga as curvas
-// **    b - Desenha curvas de Bezier
-// **    s - Desenha curvas de B-spline
-// **
-// */
 
 /* Todos os pontos de controle sao convertidos para pontos Bezier para
  permitir o uso do OpenGL evaluators */
@@ -33,7 +21,6 @@ typedef enum
     BSPLINE
 } tipoCurva;
 
-void keyboard(unsigned char key, int x, int y);
 void calculaMatriz(tipoCurva type, float m[4][4]);
 void mult(float m[4][4], float v[4][3], float r[4][3]);
 
@@ -46,12 +33,23 @@ GLfloat colors[][3] =
 };
 
 
-#define MAX_CPTS  25            /* Numero maximo de pontos de controle */
+/* Numero maximo de pontos de controle */
+#define MAX_CPTS  25
 
 GLfloat cpts[MAX_CPTS][3];
 int ncpts = 0;
+int grauCurva = 3;
+tipoCurva tipo = BEZIER;
 
-static int width = 500, height = 500;           /* tamanho da janela */
+static int window;
+static int width = 800, height = 600;
+
+static int menu_id;
+static int arquivoSubmenu_id;
+static int curvaSubmenu_id;
+static int tipoCurvaSubmenu_id;
+static int grauCurvaSubmenu_id;
+static int transformarCurvaSubmenu_id;
 
 
 /* Matriz */
@@ -118,8 +116,10 @@ static void desenhaCurva(tipoCurva type)
     /* Calcula a matriz de pontos de controle, e o step */
     calculaMatriz(type, m);
     
-	if(type == BSPLINE) step = 1;
-	else step = 3;
+	if(type == BSPLINE)
+        step = 1;
+	else
+        step = 3;
     
     glColor3fv(colors[type]);
     
@@ -138,6 +138,7 @@ static void desenhaCurva(tipoCurva type)
         /* Avanca ao proximo segmento */
         i += step;
     }
+    
     glFlush();
 }
 
@@ -183,11 +184,134 @@ static void display(void)
     
     glColor3f(0.0, 0.0, 0.0);
     glPointSize(5.0);
+    
     glBegin(GL_POINTS);
     for (i = 0; i < ncpts; i++)
         glVertex3fv(cpts[i]);
     glEnd();
+    
     glFlush();
+}
+
+
+void menu(int num)
+{    
+    switch(num) {
+            
+        /*Sair*/
+		case 0:
+            glutDestroyWindow(window);
+			exit(0);
+			break;
+        
+        /*Limpar tela*/
+        case 1:
+            ncpts = 0;
+			glutPostRedisplay();
+            break;
+        
+        /*Não definido*/
+        case 2:
+            break;
+            
+        /*Alterar grau da curva 3-10*/
+		case 3:
+        case 4:
+        case 5:
+        case 6:
+        case 7:
+        case 8:
+        case 9:
+        case 10:
+            grauCurva = num;
+            break;
+            
+        /*Criar curva*/
+        case 11:
+            if (tipo == BSPLINE)
+                desenhaCurva(BSPLINE);
+            else
+                desenhaCurva(BEZIER);
+            break;
+            
+        /*Excluir curva*/
+		case 12:
+            glutPostRedisplay();
+            break;
+            
+        /*Escolher tipo: BSPLINE */
+		case 13:
+            tipo = BSPLINE;
+            break;
+            
+        /*Escolher tipo: BEZIER*/
+        case 14:
+            tipo = BEZIER;
+            break;
+            
+        /*Transladar curva*/
+		case 15:
+            break;
+            
+        /*Rotacioar curva*/
+		case 16:
+            break;
+            
+        /*Escalar curva*/
+        case 17:
+            break;
+            
+        /*Abrir arquivo*/
+		case 18:
+            break;
+            
+        /*Salvar arquivo*/
+		case 19:{
+            break;
+        }
+	}
+}
+
+
+void createMenu(void)
+{
+    arquivoSubmenu_id = glutCreateMenu(menu);
+    glutAddMenuEntry("Abrir", 18);
+    glutAddMenuEntry("Salvar", 19);
+    
+    tipoCurvaSubmenu_id = glutCreateMenu(menu);
+    glutAddMenuEntry("B-spline ", 13);
+    glutAddMenuEntry("Bezier", 14);
+    
+    grauCurvaSubmenu_id = glutCreateMenu(menu);
+    glutAddMenuEntry("3", 3);
+    glutAddMenuEntry("4", 4);
+    glutAddMenuEntry("5", 5);
+    glutAddMenuEntry("6", 6);
+    glutAddMenuEntry("7", 7);
+    glutAddMenuEntry("8", 8);
+    glutAddMenuEntry("9", 9);
+    glutAddMenuEntry("10", 10);
+    
+    transformarCurvaSubmenu_id = glutCreateMenu(menu);
+    glutAddMenuEntry("Transladar", 15);
+    glutAddMenuEntry("Rotacionar", 16);
+    glutAddMenuEntry("Escalar", 17);
+    
+    curvaSubmenu_id = glutCreateMenu(menu);
+    glutAddMenuEntry("Criar curva", 11);
+    glutAddMenuEntry("Excluir curvas", 12);
+    glutAddSubMenu("Alterar tipo", tipoCurvaSubmenu_id);
+    glutAddSubMenu("Alterar grau", grauCurvaSubmenu_id);
+    glutAddSubMenu("Transformar curva", transformarCurvaSubmenu_id);
+    
+    menu_id = glutCreateMenu(menu);
+    glutAddSubMenu("Curva", curvaSubmenu_id);
+    glutAddMenuEntry("Limpar tela", 1);
+    glutAddSubMenu("Arquivo", arquivoSubmenu_id);
+    glutAddMenuEntry("Sair do programa", 0);
+    
+    glutAttachMenu(GLUT_RIGHT_BUTTON);
 }
 
 
@@ -218,40 +342,12 @@ static void mouse(int button, int state, int x, int y)
     /* Desenha o ponto */
     glColor3f(0.0, 0.0, 0.0);
     glPointSize(5.0);
+
     glBegin(GL_POINTS);
-    glVertex3f(wx, wy, 0.0);
+        glVertex3f(wx, wy, 0.0);
     glEnd();
     
     glFlush();
-}
-
-
-/* Aqui nós lidamos com a entrada do usuario */
-void keyboard(unsigned char key, int x, int y)
-{
-    static tipoCurva lasttype = BEZIER;
-    
-    switch (key)
-    {
-        case 'q': case 'Q':
-            exit(0);
-            break;
-        case 'c': case 'C':
-			ncpts = 0;
-			glutPostRedisplay();
-            break;
-        case 'e': case 'E':
-            glutPostRedisplay();
-            break;
-        case 'b': case 'B':
-            desenhaCurva(BEZIER);
-            lasttype = BEZIER;
-            break;
-        case 's': case 'S':
-            desenhaCurva(BSPLINE);
-            lasttype = BSPLINE;
-            break;
-    }
 }
 
 
@@ -269,15 +365,15 @@ void reshape(int w, int h)
     glViewport(0, 0, w, h);
     
     
-#if defined(ASSIGNMENT_AVISO)
+    #if defined(ASSIGNMENT_AVISO)
     
-#if defined(ASSIGNMENT_ROTACAO_ESCALA_TRANSLACAO)
-    const int assignment_number = 1;
-#else
-    const int assignment_number = 0;
-#endif
+        #if defined(ASSIGNMENT_ROTACAO_ESCALA_TRANSLACAO)
+            const int assignment_number = 1;
+        #else
+            const int assignment_number = 0;
+        #endif
     
-#endif
+    #endif
     
 }
 
@@ -285,7 +381,7 @@ void reshape(int w, int h)
 int main(int argc, char **argv)
 
 {
-    /* Inicializando o programa !!! */
+    /* Inicializando o programa */
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGB);
     glutInitWindowSize(width, height);
@@ -293,13 +389,15 @@ int main(int argc, char **argv)
     
     /* Chamadas de funções */
     
+    glutCreateWindow("Computação Gráfica - Construção de Curvas");
+    
+    /* Chamadas de funções */
+    createMenu();
     glutDisplayFunc(display);
     glutMouseFunc(mouse);
-    glutKeyboardFunc(keyboard);
     glutReshapeFunc(reshape);
 	glClearColor(2.0, 2.0, 1.0, 1.0);
     glEnable(GL_MAP1_VERTEX_3);
-    
     
     glutMainLoop();
 }
