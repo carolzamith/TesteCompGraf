@@ -24,6 +24,8 @@
 
 #include <GLUT/glut.h>
 
+GLint tx,ty,angulo;
+GLfloat ex,ey;
 
 typedef enum
 {
@@ -160,6 +162,19 @@ static void escala(){
 
 }
 
+static void desenha(){
+    
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    glClear(GL_COLOR_BUFFER_BIT);
+    glColor3f(0.0, 0.0, 0.0);
+    glTranslatef(-150.0f, -30.0f, 0);
+    glScalef(-40.0f, -20.0f, 1);
+    glRotatef(0, 0, 0, 1);
+    glFlush();
+}
+
+
 /* Mostra os pontos de controle */
 static void display(void)
 {
@@ -246,7 +261,7 @@ void reshape(int w, int h)
     width = w;
     height = h;
     
-    /* Set the transformations */
+    /* Lida com transformacoes */
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     glOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
@@ -268,14 +283,16 @@ void reshape(int w, int h)
 
 
 int main(int argc, char **argv)
+
 {
     /* Inicializando o programa !!! */
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGB);
     glutInitWindowSize(width, height);
-    glutCreateWindow("curves");
+    glutCreateWindow("curvas");
     
     /* Chamadas de funções */
+    
     glutDisplayFunc(display);
     glutMouseFunc(mouse);
     glutKeyboardFunc(keyboard);
