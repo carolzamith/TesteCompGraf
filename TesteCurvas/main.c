@@ -8,19 +8,18 @@
 
 // **
 // **
-// **  The following keyboard commands are used to control the
-// **  program:
+// **   Menu do programa:
 // **
-// **    q - Quit the program
-// **    c - Clear the screen
-// **    e - Erase the curves
-// **    b - Draw Bezier curves
-// **    s - Draw B-spline curves
+// **    q - Sai do programa
+// **    c - Limpa a tela
+// **    e - Apaga as curvas
+// **    b - Desenha curvas de Bezier
+// **    s - Desenha curvas de B-spline
 // **
 // */
 
-/* All control points are converted to Bezier
- control point to allow use of OpenGL evaluators */
+/* Todos os pontos de controle sao convertidos para pontos Bezier para
+ permitir o uso do OpenGL evaluators */
 
 
 #include <GLUT/glut.h>
@@ -29,15 +28,14 @@
 typedef enum
 {
     BEZIER,
-    INTERPOLATED,
     BSPLINE
-} curveType;
+} tipoCurva;
 
 void keyboard(unsigned char key, int x, int y);
-void computeMatrix(curveType type, float m[4][4]);
-void vmult(float m[4][4], float v[4][3], float r[4][3]);
+void calculaMatriz(tipoCurva type, float m[4][4]);
+void mult(float m[4][4], float v[4][3], float r[4][3]);
 
-/* Colors to draw them in */
+/* Cores para desenhar */
 GLfloat colors[][3] =
 {
     { 1.0, 0.0, 0.0 },
@@ -46,40 +44,28 @@ GLfloat colors[][3] =
 };
 
 
-#define MAX_CPTS  25            /* Fixed maximum number of control points */
+#define MAX_CPTS  25            /* Numero maximo de pontos de controle */
 
 GLfloat cpts[MAX_CPTS][3];
 int ncpts = 0;
 
-static int width = 500, height = 500;           /* Window width and height */
+static int width = 500, height = 500;           /* tamanho da janela */
 
 
-/* Matrix stuff */
+/* Matriz */
 
-/* This routine multiplies two 4 x 4 matrices. */
-
-/* This routine multiplies a 4 x 4 matrix with a vector of 4 points. */
-void vmult(float m[4][4], float v[4][3], float r[4][3])
+void mult(float m[4][4], float v[4][3], float r[4][3])
 {
     int i, j, k;
     
     for (i = 0; i < 4; i++)
-        for (j = 0; j < 3; j++)
+        for (j = 0; j <3; j++)
             for (k = 0, r[i][j] = 0.0; k < 4; k++)
                 r[i][j] += m[i][k] * v[k][j];
 }
 
 
-/* Interpolating to Bezier matrix */
-static float minterp[4][4] =
-{
-    { 1.0, 0.0, 0.0, 0.0 },
-    { -5.0/6.0, 3.0, -3.0/2.0, 1.0/3.0 },
-    { 1.0/3.0, -3.0/2.0, 3.0, -5.0/6.0 },
-    { 0.0, 0.0, 0.0, 1.0 },
-};
-
-/* B-spline to Bezier matrix */
+/* B-spline para matriz de Bezier  */
 static float mbspline[4][4] =
 {
     { 1.0/6.0, 4.0/6.0, 1.0/6.0, 0.0 },
@@ -98,15 +84,14 @@ static float midentity[4][4] =
 
 
 
-/* Calculate the matrix used to transform the control points */
-void computeMatrix(curveType type, float m[4][4])
+/* Calcula a matriz usada na transformacao dos pontos de controle */
+void calculaMatriz(tipoCurva type, float m[4][4])
 {
     int i, j;
     
     switch (type)
     {
         case BEZIER:
-            /* Identity matrix */
             for (i = 0; i < 4; i++)
                 for (j = 0; j < 4; j++)
 					m[i][j] = midentity[i][j];
@@ -119,8 +104,8 @@ void computeMatrix(curveType type, float m[4][4])
     }
 }
 
-/* Draw the indicated curves using the current control points. */
-static void drawCurves(curveType type)
+/* Desenha a curva indicada, usando os pontos de controle */
+static void desenhaCurva(tipoCurva type)
 {
     int i;
     int step;
@@ -128,35 +113,35 @@ static void drawCurves(curveType type)
     
     float m[4][4];
     
-    /* Set the control point computation matrix and the step size. */
-    computeMatrix(type, m);
+    /* Calcula a matriz de pontos de controle, e o step */
+    calculaMatriz(type, m);
     
 	if(type == BSPLINE) step = 1;
 	else step = 3;
     
     glColor3fv(colors[type]);
     
-    /* Draw the curves */
+    /* Desenha as curvas */
     i = 0;
     while (i + 3 < ncpts)
     {
-        /* Calculate the appropriate control points */
-        vmult(m, &cpts[i], newcpts);
+        /* Calcula com os devidos pontos de controle */
+        mult(m, &cpts[i], newcpts);
         
-        /* Draw the curve using OpenGL evaluators */
+        /* Desenha a curva com o OpenGL evaluators */
         glMap1f(GL_MAP1_VERTEX_3, 0.0, 1.0, 3, 4, &newcpts[0][0]);
         glMapGrid1f(30, 0.0, 1.0);
         glEvalMesh1(GL_LINE, 0, 30);
         
-        /* Advance to the next segment */
+        /* Avanca ao proximo segmento */
         i += step;
     }
     glFlush();
 }
 
-static void rotate(float angulo_em_graus, float eixox, float eixoy, float eixoz){
+static void rotacao(float angulo_em_graus, float eixox, float eixoy, float eixoz){
     
-    #if defined(ICGL_ASSIGNMENT_01_ROTATION_SCALE_TRANSLATION)
+    #if defined(ASSIGNMENT_ROTACAO_ESCALA_TRANSLACAO)
         matrix_struct matrix;
         make_rotation_matrix(angulo_em_graus, eixox, eixoy, eixoz, matrix);
         glMultMatrixf(matrix.data());
@@ -166,7 +151,16 @@ static void rotate(float angulo_em_graus, float eixox, float eixoy, float eixoz)
     
 }
 
-/* This routine displays the control points */
+static void translacao(){
+    
+}
+
+static void escala(){
+
+
+}
+
+/* Mostra os pontos de controle */
 static void display(void)
 {
     int i;
@@ -178,36 +172,35 @@ static void display(void)
     for (i = 0; i < ncpts; i++)
         glVertex3fv(cpts[i]);
     glEnd();
-    
     glFlush();
 }
 
 
-/* This routine inputs new control points */
+/* Esse metodo pega os novos pontos de controle */
 static void mouse(int button, int state, int x, int y)
 {
     float wx, wy;
     
-    /* We are only interested in left clicks */
+    /* Apenas nos interessa os cliques com o botao esquerdo */
     if (button != GLUT_LEFT_BUTTON || state != GLUT_DOWN)
         return;
     
-    /* Translate back to our coordinate system */
+    /* Translada para o nosso sistema de coordenadas */
     wx = (2.0 * x) / (float)(width - 1) - 1.0;
     wy = (2.0 * (height - 1 - y)) / (float)(height - 1) - 1.0;
     
     
-    /* See if we have room for any more control points */
+    /* Armazena pontos ate o maximo permitido */
     if (ncpts == MAX_CPTS)
         return;
     
-    /* Save the point */
+    /* Salva o ponto */
     cpts[ncpts][0] = wx;
     cpts[ncpts][1] = wy;
     cpts[ncpts][2] = 0.0;
     ncpts++;
     
-    /* Draw the point */
+    /* Desenha o ponto */
     glColor3f(0.0, 0.0, 0.0);
     glPointSize(5.0);
     glBegin(GL_POINTS);
@@ -218,10 +211,10 @@ static void mouse(int button, int state, int x, int y)
 }
 
 
-/* This routine handles keystroke commands */
+/* Aqui nós lidamos com a entrada do usuario */
 void keyboard(unsigned char key, int x, int y)
 {
-    static curveType lasttype = BEZIER;
+    static tipoCurva lasttype = BEZIER;
     
     switch (key)
     {
@@ -236,18 +229,18 @@ void keyboard(unsigned char key, int x, int y)
             glutPostRedisplay();
             break;
         case 'b': case 'B':
-            drawCurves(BEZIER);
+            desenhaCurva(BEZIER);
             lasttype = BEZIER;
             break;
         case 's': case 'S':
-            drawCurves(BSPLINE);
+            desenhaCurva(BSPLINE);
             lasttype = BSPLINE;
             break;
     }
 }
 
 
-/* This routine handles window resizes */
+/* Essa rotina lida com a dimensao da janela */
 void reshape(int w, int h)
 {
     width = w;
@@ -259,6 +252,18 @@ void reshape(int w, int h)
     glOrtho(-1.0, 1.0, -1.0, 1.0, -1.0, 1.0);
     glMatrixMode(GL_MODELVIEW);
     glViewport(0, 0, w, h);
+    
+    
+#if defined(ASSIGNMENT_AVISO)
+    
+#if defined(ASSIGNMENT_ROTACAO_ESCALA_TRANSLACAO)
+    const int assignment_number = 1;
+#else
+    const int assignment_number = 0;
+#endif
+    
+#endif
+    
 }
 
 
