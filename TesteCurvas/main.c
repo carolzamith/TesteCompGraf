@@ -33,11 +33,10 @@ GLfloat colors[][3] =
 };
 
 
-/* Numero maximo de pontos de controle */
-#define MAX_CPTS  25
+#define MAX_CPTS  25 /* Numero maximo de pontos de controle */
 
 GLfloat cpts[MAX_CPTS][3];
-int ncpts = 0;
+int ncpts = 0; /* Número de pontos de controle */
 int grauCurva = 3;
 tipoCurva tipo = BEZIER;
 
@@ -385,11 +384,8 @@ int main(int argc, char **argv)
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGB);
     glutInitWindowSize(width, height);
-    glutCreateWindow("curvas");
-    
-    /* Chamadas de funções */
-    
     glutCreateWindow("Computação Gráfica - Construção de Curvas");
+    
     
     /* Chamadas de funções */
     createMenu();
