@@ -26,6 +26,7 @@ tipoCurva tipo = BEZIER;
 typedef enum{
     NO_ESTADO,
     DESENHANDO,
+    TRANSLADAR,
     TRANSLADANDO,
     ROTACIONANDO,
     ESCALANDO
@@ -68,7 +69,7 @@ static float mbspline[4][4] =
     { 1.0/6.0, 4.0/6.0, 1.0/6.0, 0.0 },
     { 0.0, 4.0/6.0, 2.0/6.0, 0.0 },
     { 0.0, 2.0/6.0, 4.0/6.0, 0.0 },
-    { 0.0, 1.0/6.0, 4.0/6.0, 1.0/6.0 },
+    { 0.0, 1.0/6.0, 4.0/6.0, 1.0/6.0 }
 };
 
 static float midentity[4][4] =
@@ -136,39 +137,14 @@ static void desenharCurva()
     glFlush();
 }
 
-static void rotacionar(/*float anguloEmGraus, float eixox, float eixoy, float eixoz*/){
-    
-//    #if defined(ASSIGNMENT_ROTACAO_ESCALA_TRANSLACAO)
-//        matrix_struct matrix;
-//        make_rotation_matrix(angulo_em_graus, eixox, eixoy, eixoz, matrix);
-//        glMultMatrixf(matrix.data());
-//    #else
-//        glRotatef(anguloEmGraus, eixox, eixoy, eixoz);
-//    #endif
-    
-}
-
-static void transladar(){
-    
-}
-
-static void escalar(){
-
+static void rotacionar(tempontosdecontrole){
+//    if(tempontosdecontrole.x!=0){
+//        for (int i=0; tempontosdecontrole.size; i++) {
+//            
+//        }
+//    }
 
 }
-
-static void desenha(){
-    
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glClear(GL_COLOR_BUFFER_BIT);
-    glColor3f(0.0, 0.0, 0.0);
-    glTranslatef(-150.0f, -30.0f, 0);
-    glScalef(-40.0f, -20.0f, 1);
-    glRotatef(0, 0, 0, 1);
-    glFlush();
-}
-
 
 /* Mostra os pontos de controle */
 static void display(void)
@@ -187,6 +163,58 @@ static void display(void)
     glFlush();
 }
 
+void mouse_to_coordenada(int x, int y, float *wx_p,  float *wy_p)
+{
+    /* Adapta ao nosso sistema de coordenadas */
+    *wx_p = (2.0 * x) / (float)(width - 1) - 1.0;
+    *wy_p = (2.0 * (height - 1 - y)) / (float)(height - 1) - 1.0;
+}
+
+static void transladar(int x, int y){
+    
+    float topX = -10, topY = -10;
+    
+    int num_pontos = sizeof(pontosDeControle)/sizeof(pontosDeControle[0]);
+    
+    for (int i = 0; i < num_pontos; i++) {
+        if (pontosDeControle[i][0] && pontosDeControle[i][0] > topX) topX = pontosDeControle[i][0];
+        if (pontosDeControle[i][1] && pontosDeControle[i][1] > topY) topY = pontosDeControle[i][1];
+    }
+    
+    float wx, wy;
+    mouse_to_coordenada(x, y, &wx, &wy);
+    
+    float translationXOffset = wx - topX;
+    float translationYOffset = wy - topY;
+    
+    for (int i = 0; i < num_pontos; i++) {
+        if (pontosDeControle[i][0]) pontosDeControle[i][0] += translationXOffset;
+        if (pontosDeControle[i][1]) pontosDeControle[i][1] += translationYOffset;
+    }
+    
+    
+    estado = TRANSLADANDO;
+    display();
+    desenharCurva();
+}
+
+static void escalar(){
+
+
+}
+
+//static void desenha(){
+//    
+//    glMatrixMode(GL_MODELVIEW);
+//    glLoadIdentity();
+//    glClear(GL_COLOR_BUFFER_BIT);
+//    glColor3f(0.0, 0.0, 0.0);
+//    glTranslatef(-150.0f, -30.0f, 0);
+//    glScalef(-40.0f, -20.0f, 1);
+//    glRotatef(0, 0, 0, 1);
+//    glFlush();
+//}
+
 
 void menu(int num)
 {    
@@ -200,7 +228,7 @@ void menu(int num)
         
         /*Abrir arquivo*/
         case 1:
-            break;
+           	 break;
         
         /*Salvar arquivo*/
         case 2:
@@ -241,7 +269,7 @@ void menu(int num)
             
         /*Transladar curva*/
 		case 15:
-            estado = TRANSLADANDO;
+            estado = TRANSLADAR;
             break;
             
         /*Rotacioar curva*/
@@ -298,13 +326,14 @@ void createMenu(void)
 }
 
 
+
+
 /* Esse metodo pega os novos pontos de controle */
 static void mouse(int botao, int tecla, int x, int y)
 {
-    float wx, wy;
-    /* Adapta ao nosso sistema de coordenadas */
-    wx = (2.0 * x) / (float)(width - 1) - 1.0;
-    wy = (2.0 * (height - 1 - y)) / (float)(height - 1) - 1.0;
+    float wx;
+    float wy;
+    mouse_to_coordenada(x, y, &wx, &wy);
     
     /*Desenha na tela*/
     if (estado == DESENHANDO)
@@ -336,16 +365,16 @@ static void mouse(int botao, int tecla, int x, int y)
         if(grauCurva == (numPontosDeControle - 1)){
             desenharCurva();
             //TODO: guardar a curva atual em um array de curvas para a manipulação de curvas individuais
-            numPontosDeControle = 0;
+//            numPontosDeControle = 0;
         }
     }
     
     /*Aplica transformações*/
     else{
-        if (estado == TRANSLADANDO)
-            transladar();
+        if (estado == TRANSLADAR)
+            transladar(x, y);
         else if (estado == ROTACIONANDO)
-            rotacionar();
+            rotacionar(1);
         else if (estado == ESCALANDO)
             escalar();
     }
